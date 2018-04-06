@@ -1,3 +1,8 @@
+/**
+ * This is a sample client that uses the spiffe::WorkloadAPIClient class
+ * to fetch X.509 SVIDs
+ */
+
 #include <unistd.h>
 #include <csignal>
 #include "c-spiffe.h"
@@ -13,13 +18,12 @@ void updatedX509Callback(X509SVIDResponse x509SVIDResponse) {
     std::cout << "Fetched X509SVID with SPIFFE ID: " << x509SVIDResponse.svids(0).spiffe_id() << std::endl;
 }
 
-spiffe::WorkloadAPIClient workloadClient("unix:/tmp/agent.sock", updatedX509Callback);
-
-
 /**
  * Fetch SVIDs. If there is a failure, it retries with back-off.
  */
 void fetchX509SVIDs() {
+    spiffe::WorkloadAPIClient workloadClient("unix:/tmp/agent.sock", updatedX509Callback);
+
     Start:
     workloadClient.FetchX509SVIDs();
     if (workloadClient.GetFetchX509SVIDsStatus().ok()) {
