@@ -6,13 +6,14 @@ using grpc::ClientContext;
 using grpc::ClientReader;
 using grpc::Status;
 
+std::string const SECURITY_HEADER = "workload.spiffe.io";
+
 spiffe::WorkloadAPIClient::WorkloadAPIClient(std::string socket_address, X509SVIDsUpdatedCallback updatedCallback) {
     if (socket_address == "") {
-        if (std::getenv("SPIFFE_ENDPOINT_SOCKET") != NULL) {
-            socket_address = std::string(std::getenv("SPIFFE_ENDPOINT_SOCKET"));
-        } else {
+        if (std::getenv("SPIFFE_ENDPOINT_SOCKET") == NULL) {
             throw std::invalid_argument("SPIFFE endpoint socket not specified");
         }
+        socket_address = std::string(std::getenv("SPIFFE_ENDPOINT_SOCKET"));
     }
 
     this->socket_address = socket_address;
@@ -37,15 +38,12 @@ void spiffe::WorkloadAPIClient::FetchX509SVIDs() {
     X509SVIDRequest x509SVIDRequest;
     X509SVIDResponse x509SVIDResponse;
     ClientContext context;
-    context.AddMetadata("workload.spiffe.io", "true");
+    context.AddMetadata(SECURITY_HEADER, "true");
 
     std::unique_ptr<ClientReader<X509SVIDResponse>> reader(stub->FetchX509SVID(&context, x509SVIDRequest));
 
-    while (reader->Read(&x509SVIDResponse)) {
+    while (reader->Read(&x509SVIDResponse) && !stopFetchingX509SVIDs) {
         updatedCallback(x509SVIDResponse);
-        if (stopFetchingX509SVIDs) {
-            return;
-        }
     }
 
     fetchX509SVIDsStatus = reader->Finish();

@@ -7,7 +7,7 @@
 #include <csignal>
 #include "c-spiffe.h"
 
-#define INITIAL_DELAY 1000000
+#define INITIAL_DELAY 1000000 // microseconds
 #define TIMEOUT INITIAL_DELAY * 30
 useconds_t delay = INITIAL_DELAY;
 
@@ -26,18 +26,16 @@ void fetchX509SVIDs() {
 
     Start:
     workloadClient.FetchX509SVIDs();
-    if (workloadClient.GetFetchX509SVIDsStatus().ok()) {
-        std::cout << "FetchX509SVID rpc succeeded." << std::endl;
-    } else {
+    if (!workloadClient.GetFetchX509SVIDsStatus().ok()) {
         std::cout << "FetchX509SVID rpc failed. Error code: " << workloadClient.GetFetchX509SVIDsStatus().error_code() << ". Error message: " << workloadClient.GetFetchX509SVIDsStatus().error_message() << std::endl;
         usleep(delay);
-        if (delay < TIMEOUT) {
-            delay += delay;
-            goto Start;
-        } else {
+        if (delay >= TIMEOUT) {
             throw std::runtime_error("Timeout");
         }
+        delay += delay;
+        goto Start;           
     }
+    std::cout << "FetchX509SVID rpc succeeded." << std::endl;
 }
 
 int main(int argc, char** argv) {
